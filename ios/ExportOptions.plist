@@ -9,13 +9,6 @@
     <key>teamID</key>
     <string>GYV4MZN8UK</string>
     <key>signingStyle</key>
-    <string>manual</string>
-    <key>provisioningProfiles</key>
-    <dict>
-        <key>jp.co.anycloud.simple-sns.test-ci</key>
-        <string>simple-sns</string>
-    </dict>
-    <key>signingCertificate</key>
-    <string>Apple Distribution</string>
+    <string>automatic</string>
 </dict>
 </plist>
