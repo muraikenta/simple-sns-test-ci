@@ -1,0 +1,60 @@
+name: Deploy iOS to Firebase App Distribution
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Import provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo '${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}' | base64 --decode --output ~/Library/MobileDevice/Provisioning\ Profiles/app.mobileprovision
+      - name: Import code-signing certificates
+        uses: Apple-Actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          p12-password: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+
+      - name: Install flutter
+        uses: subosito/flutter-action@v1
+        with:
+          flutter-version: '2.10.4'
+          channel: 'stable'
+
+      - name: Install flutter dependencies
+        run: flutter pub get
+
+      - name: Build ipa
+        run: |
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist --build-number=$GITHUB_RUN_NUMBER;
+          find . -type f -name '*.ipa' -exec mv {} app-release.ipa \;
+      - name: Upload artifact
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: ipa
+          path: app-release.ipa
+
+  deploy:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download artifact
+        uses: actions/download-artifact@v1.0.0
+        with:
+          name: ipa
+
+      - name: Deploy to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
+        with:
+          appId: ${{secrets.IOS_FIREBASE_APP_ID}}
+          token: ${{secrets.FIREBASE_TOKEN}}
+          groups: testers
+          file: ipa/app-release.ipa
